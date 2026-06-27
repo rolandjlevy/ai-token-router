@@ -24,9 +24,10 @@ TokenRouter mimics a Claude Code-style workflow while routing intelligence acros
 
 1. Open Codespaces
 2. Install Cline extension
-3. Add Gemini / DeepSeek API keys
-4. Install Aider:
-   pip install aider-chat
+3. Add `.gitignore` file and add `.env` to it
+4. Create `.env` file 
+4. Add Gemini / DeepSeek API keys in `.env` file
+5. Install Aider: `pip install aider-chat`
 
 ---
 
@@ -215,3 +216,21 @@ You are routing intelligence efficiently.
 
 ---
 
+### Links
+
+Upgrade this into:
+
+* 🔥 “v2 TokenRouter” (with automatic model switching logic) 
+* 🧩 prebuilt Cline rules file (.clinerules) 
+* ⚙️ GitHub Actions integration for AI commits 
+* 📊 cost tracking dashboard for token usage per model
+* wire Cline config so it auto-selects models 
+* design a “no-thinking routing cheat sheet” so you always pick the cheapest model automatically
+
+### Links
+
+The open source coding agent in your IDE and terminal
+https://github.com/cline/cline
+
+Free Claude Code Proxy
+https://github.com/Alishahryar1/free-claude-code 
