@@ -9,7 +9,8 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "saoudrizwan.claude-dev"
+        "saoudrizwan.claude-dev",
+        "saoudrizwan.cline"
       ]
     }
   }
