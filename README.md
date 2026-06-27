@@ -1,6 +1,38 @@
-# TokenRouter — Claude Code Router + Agent Stack (Codespaces Edition)
+# 🚀 TokenRouter — Claude Code Router + Agent Stack (Codespaces Edition)
 
-A cloud-based AI coding workflow that mimics Claude Code behavior while minimizing token costs by routing tasks across multiple models.
+![Codespaces](https://img.shields.io/badge/Works%20in-Codespaces-blue?logo=github)
+![VS Code](https://img.shields.io/badge/VS%20Code-Compatible-blue?logo=visualstudiocode)
+![AI Stack](https://img.shields.io/badge/AI-Agent%20Router-green)
+![Cost Optimized](https://img.shields.io/badge/Token%20Usage-Optimized-orange)
+
+> A cloud-based AI coding workflow that mimics Claude Code behavior while minimizing token costs by routing tasks across multiple models.
+ 
+---
+
+# 🧠 What is TokenRouter?
+
+TokenRouter mimics a Claude Code-style workflow while routing intelligence across multiple models:
+
+- Gemini → planning
+- DeepSeek → coding
+- Aider → git operations
+- Claude → fallback
+
+---
+
+# 🧩 Setup
+
+1. Open Codespaces
+2. Install Cline extension
+3. Add Gemini / DeepSeek API keys
+4. Install Aider:
+   pip install aider-chat
+
+---
+
+# 💰 Goal
+
+Reduce Claude usage by 70–95% using model routing.
 
 ---
 
@@ -23,6 +55,8 @@ This allows you to:
 ---
 
 # 🏗️ System Architecture
+
+Codespaces → Cline → Model Router → Agents
 
 ```
 GitHub Codespaces (VS Code Cloud)
@@ -180,3 +214,4 @@ You are not reducing intelligence.
 You are routing intelligence efficiently.
 
 ---
+
