@@ -34,7 +34,7 @@ TokenRouter mimics a Claude Code-style workflow while routing intelligence acros
 
 # 💰 Goal
 
-Reduce Claude usage by 70–95% using model routing.
+Reduce token usage by 70–95% using model routing.
 
 ---
 
@@ -50,7 +50,7 @@ Instead, it decouples:
 
 This allows you to:
 
-* reduce Claude usage
+* reduce token usage
 * use free/cheap models where possible
 * keep a Claude Code–like developer experience
 
