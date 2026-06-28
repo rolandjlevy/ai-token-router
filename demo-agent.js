@@ -1,25 +1,27 @@
 #!/usr/bin/env node
 
 /**
- * Minimal Gemini API Agentic Programming Demo
+ * Minimal Anthropic Claude API Agentic Programming Demo
  * 
  * This script demonstrates a simple agent that can use tools/functions
  * to accomplish tasks autonomously.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 // Define tools the agent can use
 const tools = [
   {
     name: 'calculate',
     description: 'Performs basic arithmetic calculations',
-    parameters: {
+    input_schema: {
       type: 'object',
       properties: {
         expression: {
@@ -33,7 +35,7 @@ const tools = [
   {
     name: 'get_current_time',
     description: 'Gets the current date and time',
-    parameters: {
+    input_schema: {
       type: 'object',
       properties: {}
     }
@@ -63,14 +65,7 @@ function executeTool(toolName, args) {
 async function runAgent(task) {
   console.log(`\n🤖 Agent Task: ${task}\n`);
   
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
-    tools: [{ functionDeclarations: tools }]
-  });
-
-  const chat = model.startChat();
-  let response = await chat.sendMessage(task);
-  
+  const messages = [{ role: 'user', content: task }];
   let iterationCount = 0;
   const maxIterations = 5;
 
@@ -78,28 +73,46 @@ async function runAgent(task) {
   while (iterationCount < maxIterations) {
     iterationCount++;
     
-    const functionCalls = response.response.functionCalls();
-    
-    if (!functionCalls || functionCalls.length === 0) {
-      // No more tool calls - agent is done
-      console.log('✅ Agent Response:', response.response.text());
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1024,
+      tools: tools,
+      messages: messages
+    });
+
+    console.log(`\nStop reason: ${response.stop_reason}`);
+
+    if (response.stop_reason === 'end_turn') {
+      // Agent is done
+      const textContent = response.content.find(block => block.type === 'text');
+      if (textContent) {
+        console.log('✅ Agent Response:', textContent.text);
+      }
       break;
     }
 
-    // Execute each tool call
-    const functionResponses = functionCalls.map(call => {
-      console.log(`🔧 Tool Call: ${call.name}(${JSON.stringify(call.args)})`);
-      const result = executeTool(call.name, call.args);
-      console.log(`📊 Tool Result:`, result);
+    if (response.stop_reason === 'tool_use') {
+      // Execute tool calls
+      messages.push({ role: 'assistant', content: response.content });
       
-      return {
-        name: call.name,
-        response: result
-      };
-    });
+      const toolResults = response.content
+        .filter(block => block.type === 'tool_use')
+        .map(toolUse => {
+          console.log(`🔧 Tool Call: ${toolUse.name}(${JSON.stringify(toolUse.input)})`);
+          const result = executeTool(toolUse.name, toolUse.input);
+          console.log(`📊 Tool Result:`, result);
+          
+          return {
+            type: 'tool_result',
+            tool_use_id: toolUse.id,
+            content: JSON.stringify(result)
+          };
+        });
 
-    // Send tool results back to the model
-    response = await chat.sendMessage(functionResponses);
+      messages.push({ role: 'user', content: toolResults });
+    } else {
+      break;
+    }
   }
 
   if (iterationCount >= maxIterations) {
