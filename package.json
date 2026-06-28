@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Minimal Gemini API agentic programming demo",
-  "main": "demo-agent.js",
+  "main": "demo.js",
   "scripts": {
-    "start": "node demo-agent.js"
+    "start": "node demo.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

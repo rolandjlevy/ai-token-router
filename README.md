@@ -23,11 +23,12 @@ TokenRouter mimics a Claude Code-style workflow while routing intelligence acros
 # 🧩 Setup
 
 1. Open Codespaces
-2. Install Cline extension
+2. Install Cline extension or run `npm i -g cline`
 3. Add `.gitignore` file and add `.env` to it
 4. Create `.env` file 
 4. Add Gemini / DeepSeek API keys in `.env` file
 5. Install Aider: `pip install aider-chat`
+6. run `aider` to start using AI through TokenRouter
 
 ---
 
