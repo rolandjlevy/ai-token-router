@@ -3,62 +3,49 @@
 ![Codespaces](https://img.shields.io/badge/Works%20in-Codespaces-blue?logo=github)
 ![VS Code](https://img.shields.io/badge/VS%20Code-Compatible-blue?logo=visualstudiocode)
 ![AI Stack](https://img.shields.io/badge/AI-Agent%20Router-green)
-![Cost Optimized](https://img.shields.io/badge/Token%20Usage-Optimized-orange)
+![Cost Optimized](https://img.shields.io/badge/Cost-Optimized-orange)
 
-> A cloud-based AI coding workflow that mimics Claude Code behavior while minimizing token costs by routing tasks across multiple models.
- 
+> A cloud-based AI coding workflow that mimics a Claude Code experience while cutting cost by routing tasks across multiple models.
+
+> **Status:** routing is currently **manual** — you pick the model per task using the cheat-sheet below. Automatic model selection is on the [roadmap](#-roadmap). This repo is a workflow + a cost-measurement tool, not (yet) an automated router.
+
 ---
 
 # 🧠 What is TokenRouter?
 
-TokenRouter mimics a Claude Code-style workflow while routing intelligence across multiple models:
+TokenRouter keeps a Claude Code-style workflow while spreading the work across cheaper models:
 
-- Gemini → planning
-- DeepSeek → coding
-- Aider → git operations
-- Claude → fallback
+- **Gemini** → planning
+- **DeepSeek** → coding
+- **Aider** → git operations
+- **Claude** → fallback for the hard stuff
 
----
+Two different levers are doing the work, and it's worth keeping them straight:
 
-# 🧩 Setup
-
-1. Open Codespaces
-2. Install Cline extension or run `npm i -g cline`
-3. Add `.gitignore` file and add `.env` to it
-4. Create `.env` file 
-4. Add Gemini / DeepSeek API keys in `.env` file
-5. Install Aider: `pip install aider-chat`
-6. run `aider` to start using AI through TokenRouter
+- **Routing cuts cost** — the same task sent to DeepSeek instead of Claude uses roughly the _same tokens_, but the price per token is far lower.
+- **Context discipline cuts tokens** — the [workflow rules](#-workflow-rules-critical) (small sessions, diffs not rewrites, don't load the whole repo) genuinely reduce how many tokens you send, on any model.
 
 ---
 
 # 💰 Goal
 
-Reduce token usage by 70–95% using model routing.
+Cut frontier-model (Claude) **spend** by routing most work to cheap or free models, reserving Claude for tasks that justify it.
+
+Target: **70–95% lower cost** vs running everything on a top-tier model — but treat that as a hypothesis to **measure**, not a guarantee. `token-tracker.js` computes your real number from your own routing mix (see [Measuring the saving](#-measuring-the-saving)).
 
 ---
 
 # 🧠 Core Idea
 
-TokenRouter does **not replace Claude Code**.
+TokenRouter does **not replace Claude Code**. It decouples:
 
-Instead, it decouples:
+> Coding workflow (UI + agents) — from — Model intelligence (Claude / Gemini / DeepSeek / Local)
 
-> Coding workflow (UI + agents)
-> from
-> Model intelligence (Claude / Gemini / DeepSeek / Local)
-
-This allows you to:
-
-* reduce token usage
-* use free/cheap models where possible
-* keep a Claude Code–like developer experience
+So you can use cheap models where they're good enough, escalate to Claude where they aren't, and keep a familiar developer experience throughout.
 
 ---
 
 # 🏗️ System Architecture
-
-Codespaces → Cline → Model Router → Agents
 
 ```
 GitHub Codespaces (VS Code Cloud)
@@ -69,10 +56,63 @@ GitHub Codespaces (VS Code Cloud)
    ↓            ↓            ↓
 Gemini      DeepSeek      Aider
 (planning)   (coding)     (git diffs)
-
                 ↓
         Claude (fallback only)
 ```
+
+> The "router" above is **you + the cheat-sheet** today, not a piece of software. See the [roadmap](#-roadmap) for making it automatic.
+
+---
+
+# 💵 Model Pricing & Routing Cheat-Sheet
+
+Prices are USD per **1M tokens** (input / output), standard rates, **verified 2026-06-28**. Re-check before trusting — provider prices move often.
+
+| Model                 | Role                           | Input | Output | Notes                                                                  |
+| --------------------- | ------------------------------ | ----: | -----: | ---------------------------------------------------------------------- |
+| Local (Ollama)        | tiny / offline edits           | $0.00 |  $0.00 | free; you pay in quality + hardware                                    |
+| DeepSeek V4 Flash     | coding, refactors, boilerplate | $0.14 |  $0.28 | cheapest hosted; `deepseek-chat`/`-reasoner` aliases retire 2026-07-24 |
+| Gemini 3.1 Flash-Lite | planning, classification       | $0.25 |  $1.50 | free tier with reduced quota                                           |
+| Gemini 3.5 Flash      | planning, multi-step           | $1.50 |  $9.00 | free tier with reduced quota                                           |
+| Gemini 3.1 Pro        | hard planning/architecture     | $2.00 | $12.00 | **paid only** since 2026-04-01                                         |
+| Claude Haiku 4.5      | cheap fallback                 | $1.00 |  $5.00 |                                                                        |
+| Claude Sonnet 4.6     | balanced fallback              | $3.00 | $15.00 |                                                                        |
+| Claude Opus 4.8       | hardest reasoning / deep debug | $5.00 | $25.00 | use sparingly                                                          |
+
+The spread is the whole point: DeepSeek V4 Flash output ($0.28) is roughly **90× cheaper** than Claude Opus 4.8 output ($25.00). Routing even half your work off the top tier is a large cost cut.
+
+> "Free" with care: only local models are truly free. Gemini Flash/Flash-Lite have a **rate-limited** free tier (Gemini Pro is paid-only since April 2026); DeepSeek gives new accounts a one-off ~5M-token grant, then bills per token.
+
+---
+
+# 🧩 Setup
+
+1. Open the repo in **GitHub Codespaces**.
+2. Install the **Cline** extension (or `npm i -g cline`).
+3. Install **Aider**: `pip install aider-chat`.
+4. Provide API keys (see [Secrets](#-secrets-do-this-properly) — don't commit a `.env`).
+5. Apply the [workflow rules](#-workflow-rules-critical).
+6. Run `aider` (or drive Cline) to start working through TokenRouter.
+
+## 🔐 Secrets (do this properly)
+
+Never commit real keys. Use this `.gitignore`:
+
+```gitignore
+# secrets — never commit
+.env
+.env.*
+# …except the template
+!.env.example
+```
+
+Then:
+
+- Commit a **`.env.example`** with every key _name_ and blank values, as documentation.
+- For local work, put real keys in **`.env`** (ignored above).
+- For Codespaces, prefer **GitHub → Settings → Secrets and variables → Codespaces** so keys are injected as env vars and no secret file ever exists in the cloud — nothing to leak, rotate in one place.
+
+Keys you'll need: `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, and (optional) `ANTHROPIC_API_KEY`.
 
 ---
 
@@ -80,158 +120,86 @@ Gemini      DeepSeek      Aider
 
 ## 1. GitHub Codespaces
 
-* Cloud-based VS Code environment
-* No local machine required
-* Full terminal + extensions
+Cloud VS Code — no local machine, full terminal + extensions.
 
----
+## 2. Cline (primary agent interface)
 
-## 2. Cline (Primary Agent Interface)
+VS Code agent that handles file edits, terminal actions, and reasoning loops. Configured rules: only modify required files, prefer diffs over full rewrites, ask before expanding scope, work step-by-step.
 
-* VS Code agent extension
-* Handles file edits, terminal actions, reasoning loops
+## 3. Aider (terminal agent)
 
-Configured rules:
+Git-aware, diff-based assistant. Use for small scoped changes, refactors, and safe incremental edits.
 
-* Only modify required files
-* Prefer diffs over full rewrites
-* Ask before expanding scope
-* Work step-by-step
+## 4. Model routing layer (manual today)
 
----
-
-## 3. Aider (Terminal Agent)
-
-* Git-aware coding assistant
-* Lightweight, fast, diff-based edits
-
-Use for:
-
-* small scoped changes
-* refactors
-* safe incremental edits
-
----
-
-## 4. Model Routing Layer
-
-### 🟢 Gemini (Default)
-
-Use for:
-
-* planning
-* architecture
-* debugging strategy
-* multi-step breakdowns
-
-### 🟡 DeepSeek
-
-Use for:
-
-* coding tasks
-* boilerplate
-* refactors
-
-### 🔵 Local Models (optional via Ollama)
-
-Use for:
-
-* small edits
-* offline or cheap tasks
-
-### 🔴 Claude (Fallback)
-
-Use only for:
-
-* complex reasoning
-* deep debugging
-* architecture decisions
+- 🟢 **Gemini** — planning, architecture, debugging strategy, multi-step breakdowns
+- 🟡 **DeepSeek** — coding, boilerplate, refactors
+- 🔵 **Local (Ollama)** — small edits, offline/cheap tasks
+- 🔴 **Claude** — complex reasoning, deep debugging, architecture decisions (fallback)
 
 ---
 
 # 🧩 Workflow Rules (Critical)
 
-## Rule 1 — New task = new session
+These are what actually reduce **token count**, independent of which model you use.
 
-Avoid carrying unrelated context.
-
-## Rule 2 — Never load full repo
-
-Only inspect files relevant to the task.
-
-## Rule 3 — Always prefer diffs
-
-Request only modified functions or lines.
-
-## Rule 4 — Plan before coding
-
-Use Gemini to break tasks into steps.
-
-## Rule 5 — Minimize logs and context
-
-Do not paste full logs or large files.
+1. **New task = new session** — avoid carrying unrelated context.
+2. **Never load the full repo** — inspect only files relevant to the task.
+3. **Always prefer diffs** — request only modified functions or lines.
+4. **Plan before coding** — use a cheap model to break the task into steps.
+5. **Minimize logs and context** — don't paste full logs or large files.
 
 ---
 
-# 💰 Cost Strategy
+# 📊 Measuring the saving
 
-Token usage is reduced by routing tasks:
+Don't assert the 70–95% — measure it with `token-tracker.js`.
 
-* 60–80% → free models (Gemini + local)
-* 15–30% → cheap models (DeepSeek)
-* 5–10% → Claude (high-value tasks only)
+1. **Fix a task set.** Write 10–20 representative tasks (e.g. "add validation to X", "refactor component Y", "fix failing test Z") in `tasks.md`. It must be fixed so runs are comparable.
+2. **Track every call.** Wrap each model response: `tracker.track('deepseek-v4-flash', response)`. The tracker handles Anthropic, OpenAI-compatible (DeepSeek), and Gemini usage shapes.
+3. **Report.** `tracker.report()` prints per-model tokens + cost, and compares your **routed** cost against a **baseline** (the same tokens priced as if everything ran on Claude Opus). The `%` it prints is your real, defensible headline number.
 
----
+```js
+import { TokenTracker } from './token-tracker.js';
+const tracker = new TokenTracker({ baselineModel: 'claude-opus-4-8' });
 
-# 🚀 Setup Summary
+tracker.track('gemini-3.1-flash-lite', planningResponse);
+tracker.track('deepseek-v4-flash', codingResponse);
+tracker.track('claude-opus-4-8', hardTaskResponse);
 
-1. Create GitHub Codespace
-2. Install Cline extension
-3. Configure Gemini API key
-4. Install Aider:
+tracker.report(); // → "82% cheaper than all-Claude Opus 4.8"
+```
 
-   ```
-   pip install aider-chat
-   ```
-5. (Optional) Add DeepSeek + Ollama
-6. Apply workflow rules above
+Logging tokens _and_ cost side by side also makes the core point visible: routing barely changes token counts, but moves cost a lot.
 
 ---
 
-# 🎯 Outcome
+# ⚠️ Honest limitations
 
-TokenRouter creates a developer environment that:
+- **Cheaper models can be wrong more often.** The bet is that the _easy subset_ is good enough. A misrouted task (sent to DeepSeek/local when it needed Claude) can cost you more in debugging and re-runs than it saved — so have an escalation rule, not just "Claude = fallback".
+- **One frontier call can dominate.** In a routed run, a single Opus task often accounts for most of the bill (the demo shows ~90%). Watch _where_ the spend lands, not just the average.
+- **The baseline is a counterfactual.** Savings are measured against "what if everything ran on Opus" at the same token counts; real cheap-model verbosity/retries can erode it. That's the point of measuring on a fixed task set rather than assuming.
 
-* behaves like Claude Code
-* runs entirely in the cloud (Codespaces)
-* minimizes reliance on expensive models
-* scales from free → premium intelligence layers
+---
+
+# 🗺️ Roadmap
+
+- 🔥 v2: automatic model switching (wire Cline/LiteLLM to auto-select by task)
+- 🧩 prebuilt `.clinerules` with an explicit escalation rule (escalate to Claude on test failure or when a task touches > N files)
+- ⚙️ GitHub Actions integration for AI commits
+- 📊 cost-tracking dashboard built on `token-tracker.js` output
+- 🔀 a real router: front the stack with **LiteLLM** or **OpenRouter** (single OpenAI-compatible endpoint) so Cline/Aider point at one URL and routing lives in config
+
+---
+
+# 📎 References
+
+- Cline — open-source coding agent for IDE + terminal: <https://github.com/cline/cline>
+- Aider — terminal git-aware coding assistant: <https://aider.chat>
+- LiteLLM — unified proxy/router for 100+ LLMs: <https://github.com/BerriAI/litellm>
 
 ---
 
 # ⚠️ Key Principle
 
-You are not reducing intelligence.
-
-You are routing intelligence efficiently.
-
----
-
-### Links
-
-Upgrade this into:
-
-* 🔥 “v2 TokenRouter” (with automatic model switching logic) 
-* 🧩 prebuilt Cline rules file (.clinerules) 
-* ⚙️ GitHub Actions integration for AI commits 
-* 📊 cost tracking dashboard for token usage per model
-* wire Cline config so it auto-selects models 
-* design a “no-thinking routing cheat sheet” so you always pick the cheapest model automatically
-
-### Links
-
-The open source coding agent in your IDE and terminal
-https://github.com/cline/cline
-
-Free Claude Code Proxy
-https://github.com/Alishahryar1/free-claude-code 
+You're not removing intelligence from the loop — you're spending it where it's worth it. Cheap models do the bulk work; the frontier model is reserved for the tasks that actually need it.

@@ -1,0 +1,47 @@
+# TokenRouter — Cline operating rules
+
+You run inside TokenRouter. All models are reached through one LiteLLM endpoint
+as aliases: `plan` (Gemini), `code` (DeepSeek), `local` (Ollama), `claude` and
+`claude-deep` (Claude). Default to the cheap models; treat Claude as a scarce
+resource you escalate to deliberately.
+
+## Default routing
+- Plan mode → use the `plan` model. Act mode → use the `code` model.
+- Trivial or offline edits → `local`.
+- The goal is to keep most work on `plan`/`code`/`local` and only spend Claude
+  where it's justified by the rules below.
+
+## Context discipline (these cut tokens on every model)
+1. New task = new session. Don't carry unrelated context.
+2. Never load the full repo. Open only files relevant to the task.
+3. Prefer diffs. Edit only the functions/lines that must change; don't rewrite
+   whole files.
+4. Plan before coding. Break the task into steps first (in Plan mode).
+5. Don't paste full logs or large files — quote the minimal relevant slice.
+
+## Escalate to Claude when ANY of these is true
+The LiteLLM proxy only auto-escalates on *technical* failure (rate-limit, 5xx,
+context overflow). The quality calls below are YOUR job — when one triggers,
+switch the model to `claude` (or `claude-deep` for the hardest) for that task,
+then drop back to `code`/`plan` afterwards.
+
+- **Tests or build fail after a cheap-model diff** and a single focused retry on
+  `code` does not fix them. Do not loop on `code` more than twice — escalate.
+- **The task touches more than 3 files** or needs a cross-cutting / architectural
+  change rather than a local edit.
+- **Two consecutive failed attempts** on the same sub-task.
+- **Security- or data-sensitive code:** auth, crypto, secrets, payments, access
+  control, SQL or schema migrations, anything that can cause data loss.
+- **Ambiguous or underspecified requirements:** first ask one clarifying
+  question; if it's still unclear or high-stakes, plan it on `claude`.
+- **Subtle correctness risk:** concurrency, race conditions, money/rounding,
+  timezones, or performance-critical paths.
+
+## After escalating
+- State briefly why you escalated (which trigger fired).
+- Once the hard part is solved and verified, return to `code`/`plan` for the
+  remaining routine work.
+
+## Before finishing
+- Run the relevant tests/build. Never report done on a red test.
+- Summarise the change as a diff, not a prose essay.

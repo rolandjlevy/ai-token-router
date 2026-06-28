@@ -1,0 +1,81 @@
+# litellm_config.yaml
+# ---------------------------------------------------------------------------
+# One OpenAI-compatible endpoint (http://localhost:4000) in front of every
+# model. The manual cheat-sheet is now codified here as aliases + fallback
+# chains. Cline and Aider point at this single URL.
+#
+# What this gives you:
+#   - unified endpoint + one key for Gemini / DeepSeek / Ollama / Claude
+#   - automatic escalation to Claude on TECHNICAL failure (rate-limit, 5xx,
+#     context-window overflow) via fallbacks / context_window_fallbacks
+#   - per-request spend tracking
+#
+# What it does NOT do: decide easy-vs-hard by reading the prompt. Which alias
+# a request STARTS on is chosen by the client (Cline/Aider) or by .clinerules.
+#
+# Run:  pip install 'litellm[proxy]'
+#       litellm --config litellm_config.yaml --port 4000
+#
+# Keys come from the environment (see .env / Codespaces secrets):
+#   GEMINI_API_KEY, DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, LITELLM_MASTER_KEY
+# ---------------------------------------------------------------------------
+
+model_list:
+  # 🟢 planning — cheap/free Gemini tier
+  - model_name: plan
+    litellm_params:
+      model: gemini/gemini-3.5-flash          # AI Studio ID (2026-06). If your
+      api_key: os.environ/GEMINI_API_KEY       # litellm build can't cost-map a
+                                               # new ID it still routes; upgrade
+                                               # litellm or use gemini-2.5-flash.
+  - model_name: plan-lite
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: os.environ/GEMINI_API_KEY
+
+  # 🟡 coding — DeepSeek V4 Flash (cheapest hosted)
+  - model_name: code
+    litellm_params:
+      model: deepseek/deepseek-chat            # alias → V4 Flash; switch to
+      api_key: os.environ/DEEPSEEK_API_KEY     # deepseek/deepseek-v4-flash
+                                               # before the 2026-07-24 retirement.
+
+  # 🔵 local — Ollama (free; pull the model first: `ollama pull qwen2.5-coder`)
+  - model_name: local
+    litellm_params:
+      model: ollama_chat/qwen2.5-coder:7b
+      api_base: http://localhost:11434
+
+  # 🔴 escalation — Claude. `claude` = balanced; `claude-deep` = hardest.
+  - model_name: claude
+    litellm_params:
+      model: anthropic/claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+  - model_name: claude-deep
+    litellm_params:
+      model: anthropic/claude-opus-4-8
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+litellm_settings:
+  drop_params: true            # ignore params a given provider doesn't support
+  # Escalate on ANY error after retries are exhausted:
+  fallbacks:
+    - {"code": ["claude"]}
+    - {"plan": ["claude"]}
+    - {"plan-lite": ["plan", "claude"]}
+    - {"local": ["code", "claude"]}
+    - {"claude": ["claude-deep"]}
+  # Escalate specifically when the context is too large for the cheap model:
+  context_window_fallbacks:
+    - {"code": ["claude"]}
+    - {"plan": ["claude"]}
+    - {"local": ["code", "claude"]}
+
+router_settings:
+  num_retries: 2
+  timeout: 600                 # seconds; coding turns can be long
+  allowed_fails: 3             # cool a deployment down after 3 fails/min
+  cooldown_time: 60
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY   # clients authenticate with this
