@@ -8,6 +8,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import * as dotenv from 'dotenv';
+import { TokenTracker } from './token-tracker.js';
 
 dotenv.config({ path: '.env' });
 
@@ -68,8 +69,7 @@ async function runAgent(task) {
   const messages = [{ role: 'user', content: task }];
   let iterationCount = 0;
   const maxIterations = 5;
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
+  const tokenTracker = new TokenTracker();
 
   // Agentic loop: keep going until the model stops requesting tools
   while (iterationCount < maxIterations) {
@@ -83,11 +83,7 @@ async function runAgent(task) {
     });
 
     // Track token usage
-    if (response.usage) {
-      totalInputTokens += response.usage.input_tokens;
-      totalOutputTokens += response.usage.output_tokens;
-      console.log(`\n📊 Token Usage (this call): Input: ${response.usage.input_tokens}, Output: ${response.usage.output_tokens}`);
-    }
+    tokenTracker.track(response);
 
     console.log(`\nStop reason: ${response.stop_reason}`);
 
@@ -133,10 +129,7 @@ async function runAgent(task) {
   }
 
   // Display total token usage
-  console.log(`\n📈 Total Token Usage:`);
-  console.log(`   Input tokens:  ${totalInputTokens}`);
-  console.log(`   Output tokens: ${totalOutputTokens}`);
-  console.log(`   Total tokens:  ${totalInputTokens + totalOutputTokens}`);
+  tokenTracker.displayTotal();
 }
 
 // Run the demo
