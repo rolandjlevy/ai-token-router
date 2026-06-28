@@ -74,7 +74,7 @@ async function runAgent(task) {
     iterationCount++;
     
     const response = await anthropic.messages.create({
-      model: 'claude-3-opus-20240229',
+      model: 'claude-3-5-sonnet-latest',
       max_tokens: 1024,
       tools: tools,
       messages: messages
