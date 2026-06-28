@@ -1,0 +1,14 @@
+{
+  "name": "gemini-agent-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Minimal Gemini API agentic programming demo",
+  "main": "demo-agent.js",
+  "scripts": {
+    "start": "node demo-agent.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5"
+  }
+}
